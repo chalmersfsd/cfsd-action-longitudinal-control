@@ -1,0 +1,34 @@
+os: linux
+language: cpp
+sudo: required
+branches:
+  only:
+  - "/^master$/"
+  - "/^pre-release$/"
+  - "/^v.*$/"
+services:
+- docker
+addons:
+  apt:
+    update: true
+env:
+  global:
+  - BRANCH=${TRAVIS_BRANCH}
+  - TAG=${TRAVIS_TAG}
+  - DOCKERHUB='chalmersfsd'
+  - IMAGE=`echo ${TRAVIS_REPO_SLUG#*/}`
+install:
+- docker build -f Dockerfile.amd64 -t ${IMAGE}:${BRANCH} .
+script: skip
+after_success:
+- if [[ -z "${TAG}" ]]; then echo "This commit hasn't been tagged, will not be pushed
+  to dockerhub"; exit 0; fi
+- docker --version
+- echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
+- docker tag ${IMAGE}:${BRANCH} ${DOCKERHUB}/${IMAGE}:${TAG}
+- docker push ${DOCKERHUB}/${IMAGE}:${TAG}
+- echo "${DOCKERHUB}/${IMAGE}:${TAG}"
+notifications:
+  email:
+    on_success: never
+    on_failure: never
