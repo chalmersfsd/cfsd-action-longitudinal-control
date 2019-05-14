@@ -33,6 +33,7 @@ class Motion {
 
     void setLeftWheelSpeed(float speed);
     void setRightWheelSpeed(float speed);
+    void setSpeedRequest(float groundSpeed);
 
   private:
     void setUp();
@@ -43,6 +44,7 @@ class Motion {
     cluon::OD4Session &m_od4;
     float m_leftWheelSpeed;
     float m_rightWheelSpeed;
+    float m_speedRequest;
 
     std::mutex m_readingsMutex;
 

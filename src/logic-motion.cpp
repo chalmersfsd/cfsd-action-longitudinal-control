@@ -22,6 +22,7 @@ Motion::Motion(cluon::OD4Session &od4)
   : m_od4{od4}
   , m_leftWheelSpeed{0.0f}
   , m_rightWheelSpeed{0.0f}
+  , m_speedRequest{0.0f}
 
   , m_readingsMutex{}
 {
@@ -45,19 +46,21 @@ void Motion::step()
 {
   float leftWheelSpeed;
   float rightWheelSpeed;
+  float speedRequest;
   {
     std::lock_guard<std::mutex> lock(m_readingsMutex);
 
     leftWheelSpeed = m_leftWheelSpeed;
     rightWheelSpeed = m_rightWheelSpeed;
+    speedRequest = m_speedRequest;
   }
 
   cluon::data::TimeStamp sampleTime = cluon::time::now();
 
   opendlv::proxy::TorqueRequest msgTorque;
-  msgTorque.torque(leftWheelSpeed);
+  msgTorque.torque(leftWheelSpeed - speedRequest);
   m_od4.send(msgTorque, sampleTime, 1500); // Left
-  msgTorque.torque(rightWheelSpeed);
+  msgTorque.torque(rightWheelSpeed - speedRequest);
   m_od4.send(msgTorque, sampleTime, 1501); // Right
 }
 
@@ -71,4 +74,10 @@ void Motion::setRightWheelSpeed(float speed)
 {
   std::lock_guard<std::mutex> lock(m_readingsMutex);
   m_rightWheelSpeed = speed;
+}
+
+void Motion::setSpeedRequest(float speed)
+{
+  std::lock_guard<std::mutex> lock(m_readingsMutex);
+  m_speedRequest = speed;
 }
