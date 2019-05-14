@@ -15,29 +15,22 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef ACCELERATION_H
-#define ACCELERATION_H
+#ifndef MOTION_H
+#define MOTION_H
 
 #include "opendlv-standard-message-set.hpp"
 
-enum asState {
-    AS_OFF,
-    AS_READY, 
-    AS_DRIVING, 
-    AS_FINISHED,
-    AS_EMERGENCY,
-    AS_MANUAL
- };
+#include <mutex>
 
-class Acceleration {
+
+class Motion {
   public:
-    Acceleration(cluon::OD4Session &od4);
-    ~Acceleration();
+    Motion(cluon::OD4Session &od4);
+    ~Motion();
 
   public:
     void step();
 
-    void setAsState(asState state);
     void setLeftWheelSpeed(float speed);
     void setRightWheelSpeed(float speed);
 
@@ -48,9 +41,10 @@ class Acceleration {
 
   private:
     cluon::OD4Session &m_od4;
-    asState m_asState;
     float m_leftWheelSpeed;
     float m_rightWheelSpeed;
+
+    std::mutex m_readingsMutex;
 
     
 };

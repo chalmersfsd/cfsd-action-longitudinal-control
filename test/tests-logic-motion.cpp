@@ -21,7 +21,7 @@
 #include "cluon-complete.hpp"
 #include "opendlv-standard-message-set.hpp"
 
-#include "logic-acceleration.hpp"
+#include "logic-motion.hpp"
 
 TEST_CASE("Temporary holder") {
   REQUIRE(true);

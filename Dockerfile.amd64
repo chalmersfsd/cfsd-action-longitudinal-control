@@ -29,7 +29,7 @@ WORKDIR /opt/sources
 RUN rm -rf build && \
     mkdir build && \
     cd build && \
-    cmake -D CMAKE_BUILD_TYPE=Release -D CMAKE_INSTALL_PREFIX=/tmp/acceleration-dest .. && \
+    cmake -D CMAKE_BUILD_TYPE=Release -D CMAKE_INSTALL_PREFIX=/tmp/motion-dest .. && \
     make && make test && make install
 
 
@@ -41,5 +41,5 @@ RUN apk update && \
     openssh \
     sshpass
 WORKDIR /usr/bin
-COPY --from=builder /tmp/acceleration-dest/bin/acceleration .
-CMD ["/usr/bin/acceleration"]
+COPY --from=builder /tmp/motion-dest/bin/motion .
+CMD ["/usr/bin/motion"]

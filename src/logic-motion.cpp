@@ -16,53 +16,59 @@
  */
 
 #include "cluon-complete.hpp"
-#include "logic-acceleration.hpp"
+#include "logic-motion.hpp"
 
-Acceleration::Acceleration(cluon::OD4Session &od4)
+Motion::Motion(cluon::OD4Session &od4)
   : m_od4{od4}
-  , m_asState{asState::AS_OFF}
   , m_leftWheelSpeed{0.0f}
   , m_rightWheelSpeed{0.0f}
+
+  , m_readingsMutex{}
 {
   setUp();
 }
 
-Acceleration::~Acceleration()
+Motion::~Motion()
 {
-  Acceleration::tearDown();
+  Motion::tearDown();
 }
 
-void Acceleration::setUp()
-{
-}
-
-void Acceleration::tearDown()
+void Motion::setUp()
 {
 }
 
-void Acceleration::step()
+void Motion::tearDown()
 {
+}
+
+void Motion::step()
+{
+  float leftWheelSpeed;
+  float rightWheelSpeed;
+  {
+    std::lock_guard<std::mutex> lock(m_readingsMutex);
+
+    leftWheelSpeed = m_leftWheelSpeed;
+    rightWheelSpeed = m_rightWheelSpeed;
+  }
+
   cluon::data::TimeStamp sampleTime = cluon::time::now();
 
   opendlv::proxy::TorqueRequest msgTorque;
-  msgTorque.torque(10.0f);
+  msgTorque.torque(leftWheelSpeed);
   m_od4.send(msgTorque, sampleTime, 1500); // Left
+  msgTorque.torque(rightWheelSpeed);
   m_od4.send(msgTorque, sampleTime, 1501); // Right
 }
 
-
-
-void Acceleration::setAsState(asState state)
+void Motion::setLeftWheelSpeed(float speed)
 {
-  m_asState = state;
-}
-
-void Acceleration::setLeftWheelSpeed(float speed)
-{
+  std::lock_guard<std::mutex> lock(m_readingsMutex);
   m_leftWheelSpeed = speed;
 }
 
-void Acceleration::setRightWheelSpeed(float speed)
+void Motion::setRightWheelSpeed(float speed)
 {
+  std::lock_guard<std::mutex> lock(m_readingsMutex);
   m_rightWheelSpeed = speed;
 }

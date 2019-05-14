@@ -18,7 +18,7 @@
 #include "cluon-complete.hpp"
 #include "opendlv-standard-message-set.hpp"
 
-#include "logic-acceleration.hpp"
+#include "logic-motion.hpp"
 #include <iostream>
 
 int32_t main(int32_t argc, char **argv) {
@@ -37,44 +37,31 @@ int32_t main(int32_t argc, char **argv) {
         float FREQ{static_cast<float>(std::stof(commandlineArguments["freq"]))};
         bool VERBOSE{static_cast<bool>(commandlineArguments.count("verbose"))};
 
-        Acceleration acceleration(od4);
-
-        auto onSwitchStateReading{[&acceleration, VERBOSE](cluon::data::Envelope &&envelope)
-        {
-            uint16_t senderStamp = envelope.senderStamp();
-            if (senderStamp == 1401) {
-                auto state = cluon::extractMessage<opendlv::proxy::SwitchStateReading>(std::move(envelope));
-                acceleration.setAsState(static_cast<asState>(state.state()));
-                if (VERBOSE) {
-                    std::cout << "[LOGIC-ACCELERATION] AS state reading: " << state.state() << std::endl;
-                }
-            }
-        }};
-        od4.dataTrigger(opendlv::proxy::SwitchStateReading::ID(), onSwitchStateReading);
+        Motion motion(od4);
 
         //TODO: Should we use wheelSpeedReadings or filtered groundSpeedReading?
-        auto onWheelSpeedReading{[&acceleration, VERBOSE](cluon::data::Envelope &&envelope)
+        auto onWheelSpeedReading{[&motion, VERBOSE](cluon::data::Envelope &&envelope)
         {
           uint16_t senderStamp = envelope.senderStamp();
           if (senderStamp == 1904) {
             auto wheelSpeedReading = cluon::extractMessage<opendlv::proxy::WheelSpeedReading>(std::move(envelope));
-            acceleration.setLeftWheelSpeed(wheelSpeedReading.wheelSpeed());
+            motion.setLeftWheelSpeed(wheelSpeedReading.wheelSpeed());
             if (VERBOSE) {
-              std::cout << "[LOGIC-ACCELERATION] FL wheel speed reading: " << wheelSpeedReading.wheelSpeed() << std::endl;
+              std::cout << "[ACTION-MOTION ] FL wheel speed reading: " << wheelSpeedReading.wheelSpeed() << std::endl;
             }
           } else if (senderStamp == 1903) {
             auto wheelSpeedReading = cluon::extractMessage<opendlv::proxy::WheelSpeedReading>(std::move(envelope));
-            acceleration.setRightWheelSpeed(wheelSpeedReading.wheelSpeed());
+            motion.setRightWheelSpeed(wheelSpeedReading.wheelSpeed());
             if (VERBOSE) {
-              std::cout << "[LOGIC-ACCELERATION] FR wheel speed reading: " << wheelSpeedReading.wheelSpeed() << std::endl;
+              std::cout << "[ACTION-MOTION ] FR wheel speed reading: " << wheelSpeedReading.wheelSpeed() << std::endl;
             }
           }
         }};
         od4.dataTrigger(opendlv::proxy::WheelSpeedReading::ID(), onWheelSpeedReading);
 
-        auto atFrequency{[&acceleration, &VERBOSE]() -> bool
+        auto atFrequency{[&motion, &VERBOSE]() -> bool
         {
-            acceleration.step();
+            motion.step();
             return true;
         }};
 
