@@ -26,11 +26,11 @@
 
 class Motion {
   public:
-    Motion(cluon::OD4Session &od4);
+    Motion();
     ~Motion();
 
   public:
-    void step();
+    opendlv::cfsdProxy::TorqueRequestDual step();
 
     void setLeftWheelSpeed(float speed);
     void setRightWheelSpeed(float speed);
@@ -42,10 +42,10 @@ class Motion {
 
 
   private:
-    cluon::OD4Session &m_od4;
     float m_leftWheelSpeed;
     float m_rightWheelSpeed;
     float m_speedRequest;
+    float m_pGain;
 
     std::mutex m_readingsMutex;
 

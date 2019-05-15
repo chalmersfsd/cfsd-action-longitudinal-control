@@ -38,7 +38,7 @@ int32_t main(int32_t argc, char **argv) {
         cluon::OD4Session od4{static_cast<uint16_t>(std::stoi(commandlineArguments["cid"]))};
         bool VERBOSE{static_cast<bool>(commandlineArguments.count("verbose"))};
 
-        Motion motion(od4);
+        Motion motion;
 
         //TODO: Should we use wheelSpeedReadings or filtered groundSpeedReading?
         auto onWheelSpeedReading{[&motion, VERBOSE](cluon::data::Envelope &&envelope)
@@ -60,15 +60,18 @@ int32_t main(int32_t argc, char **argv) {
         }};
         od4.dataTrigger(opendlv::proxy::WheelSpeedReading::ID(), onWheelSpeedReading);
 
-      auto onGroundSpeedRequest{[&motion, VERBOSE](cluon::data::Envelope &&envelope)
+      auto onGroundSpeedRequest{[&motion, &od4, VERBOSE](cluon::data::Envelope &&envelope)
         {
           uint16_t senderStamp = envelope.senderStamp();
           if (senderStamp == 1500) {
             auto gsr = cluon::extractMessage<opendlv::proxy::GroundSpeedRequest>(std::move(envelope));
             motion.setSpeedRequest(gsr.groundSpeed());
 
-            // Update torque request once we get a new groundSpeedRequest
-            motion.step();
+            // Calculate and send torque request once we get a new groundSpeedRequest
+            opendlv::cfsdProxy::TorqueRequestDual msgTorque = motion.step();
+            cluon::data::TimeStamp sampleTime = cluon::time::now();
+            od4.send(msgTorque, sampleTime, 2101);
+
             if (VERBOSE) {
               std::cout << "[ACTION-MOTION] Groundspeed request: " << gsr.groundSpeed() << std::endl;
             }

@@ -18,11 +18,11 @@
 #include "cluon-complete.hpp"
 #include "logic-motion.hpp"
 
-Motion::Motion(cluon::OD4Session &od4)
-  : m_od4{od4}
-  , m_leftWheelSpeed{0.0f}
+Motion::Motion()
+  : m_leftWheelSpeed{0.0f}
   , m_rightWheelSpeed{0.0f}
   , m_speedRequest{0.0f}
+  , m_pGain{}
 
   , m_readingsMutex{}
 {
@@ -36,82 +36,59 @@ Motion::~Motion()
 
 void Motion::setUp()
 {
+  // Calculate constant P gain based on model
+  // TODO: see if PI controller needed / better
+  const float gearRatio = 16.0f;
+  const float mass = 217.4f;
+  const float wheelRadius = 0.22f;
+  m_pGain = mass * wheelRadius / gearRatio * 100.0f;
+
+  std::cout << "Setting up longitudinal controller" << std::endl;
 }
 
 void Motion::tearDown()
 {
 }
 
-void Motion::step()
+opendlv::cfsdProxy::TorqueRequestDual Motion::step()
 {
   // ------------ CALCULATE TORQUE ---------------
-<<<<<<< HEAD
-  float speedReading;
-=======
-  float currentSpeed;
->>>>>>> 18b394e62bf0ee5e2c67303b6ae981c9398a9490
-  float speedRequest;
+
+  // Copy data to avoid conflict
+  float speedReading, speedRequest;
   {
     std::lock_guard<std::mutex> lock(m_readingsMutex);
 
-<<<<<<< HEAD
     speedReading = (m_leftWheelSpeed + m_rightWheelSpeed) / 2.0f;
-=======
-    currentSpeed = (m_leftWheelSpeed + m_rightWheelSpeed) / 2.0f;
->>>>>>> 18b394e62bf0ee5e2c67303b6ae981c9398a9490
     speedRequest = m_speedRequest;
   }
   
-  // TODO: see if PI controller needed / better
-  const float gearRatio = 16.0f;
-  const float mass = 217.4f;
-  const float wheelRadius = 0.22f;
-  const float pGain = mass * wheelRadius / gearRatio * 100.0f;
-<<<<<<< HEAD
-
   float speedError = speedRequest - speedReading;
-=======
->>>>>>> 18b394e62bf0ee5e2c67303b6ae981c9398a9490
-  float torque = speedError * pGain; // In [cNm]
+  float torque = speedError * m_pGain; // In [cNm]
 
   // Check the torque if the speed is below 5 km/h, important for regenerative braking
   // TODO: Check if there already exists a guard for this in the rear node
-<<<<<<< HEAD
-  if(speedReading < 5.0f / 3.6f && torque < 0.0f){
-=======
-  if(currentSpeed < 5.0f / 3.6f && torque < 0.0f){
->>>>>>> 18b394e62bf0ee5e2c67303b6ae981c9398a9490
-    torque=0;
+  if (speedReading < 5.0f / 3.6f && torque < 0.0f){
+    torque = 0.0f;
   }
 
   // Torque distribution
-<<<<<<< HEAD
   int torqueLeft = static_cast<int>(torque * 0.5f);
   int torqueRight = static_cast<int>(torque * 0.5f);
-=======
-  float torqueLeft = torque * 0.5f;
-  float torqueRight = torque * 0.5f;
->>>>>>> 18b394e62bf0ee5e2c67303b6ae981c9398a9490
 
 
-  // ------------ SEND TO CAN PROXY ---------------
-  cluon::data::TimeStamp sampleTime = cluon::time::now();
-<<<<<<< HEAD
-
+  // ------------ RETURN CORRECT MESSAGE TYPE ---------------
   opendlv::cfsdProxy::TorqueRequestDual msgTorque;
   msgTorque.torqueLeft(torqueLeft);
   msgTorque.torqueRight(torqueRight);
-=======
-  int leftTorque = static_cast<int>(leftWheelSpeed - speedRequest);
-  int rightTorque = static_cast<int>(rightWheelSpeed - speedRequest);
 
-  opendlv::cfsdProxy::TorqueRequestDual msgTorque;
-  msgTorque.torqueLeft(leftTorque);
-  msgTorque.torqueRight(rightTorque);
->>>>>>> 18b394e62bf0ee5e2c67303b6ae981c9398a9490
-  m_od4.send(msgTorque, sampleTime, 2101);
+  return msgTorque;
 }
 
+
+
+
+// Mutex protected setters
 void Motion::setLeftWheelSpeed(float speed)
 {
   std::lock_guard<std::mutex> lock(m_readingsMutex);
