@@ -37,9 +37,7 @@ RUN rm -rf build && \
 FROM alpine:3.7
 MAINTAINER Love Mowitz "lovem@student.chalmers.se"
 RUN apk update && \
-    apk --no-cache add \
-    openssh \
-    sshpass
+    apk --no-cache add
 WORKDIR /usr/bin
 COPY --from=builder /tmp/motion-dest/bin/motion .
 CMD ["/usr/bin/motion"]

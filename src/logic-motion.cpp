@@ -55,13 +55,17 @@ void Motion::step()
     speedRequest = m_speedRequest;
   }
 
+
+
   cluon::data::TimeStamp sampleTime = cluon::time::now();
 
-  opendlv::proxy::TorqueRequest msgTorque;
-  msgTorque.torque(leftWheelSpeed - speedRequest);
-  m_od4.send(msgTorque, sampleTime, 1500); // Left
-  msgTorque.torque(rightWheelSpeed - speedRequest);
-  m_od4.send(msgTorque, sampleTime, 1501); // Right
+  int leftTorque = static_cast<int>(leftWheelSpeed - speedRequest);
+  int rightTorque = static_cast<int>(rightWheelSpeed - speedRequest);
+
+  // Send to 2101
+  opendlv::cfsdProxy::TorqueRequestDual msgTorque;
+  msgTorque.torqueLeft(leftTorque);
+  msgTorque.torqueRight(rightTorque);
 }
 
 void Motion::setLeftWheelSpeed(float speed)
