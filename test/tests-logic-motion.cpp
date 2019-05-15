@@ -23,7 +23,7 @@
 
 #include "logic-motion.hpp"
 
-TEST_CASE("Speed request should result in non-zero torque") {
+TEST_CASE("Speed request should result in positive torque") {
   Motion motion;
 
   motion.setSpeedRequest(10.0f);
@@ -34,4 +34,32 @@ TEST_CASE("Speed request should result in non-zero torque") {
 
   REQUIRE(msgTorque.torqueLeft() > 0);
   REQUIRE(msgTorque.torqueRight() > 0);
+}
+
+TEST_CASE("Speed request should result in negative torque") {
+  Motion motion;
+
+  motion.setSpeedRequest(4.0f);
+  motion.setLeftWheelSpeed(10.3f);
+  motion.setRightWheelSpeed(10.1f);
+
+  opendlv::cfsdProxy::TorqueRequestDual msgTorque = motion.step();
+
+  REQUIRE(msgTorque.torqueLeft() < 0);
+  REQUIRE(msgTorque.torqueRight() < 0);
+}
+
+
+TEST_CASE("No torque if speed < 5 km/h and decelerating") {
+  Motion motion;
+
+  // Standard unit m/s, conversion from km/h
+  motion.setSpeedRequest(3.0f / 3.6f);
+  motion.setLeftWheelSpeed(4.5f / 3.6f);
+  motion.setRightWheelSpeed(4.5f / 3.6f);
+
+  opendlv::cfsdProxy::TorqueRequestDual msgTorque = motion.step();
+
+  REQUIRE(msgTorque.torqueLeft() == 0);
+  REQUIRE(msgTorque.torqueRight() == 0);
 }
