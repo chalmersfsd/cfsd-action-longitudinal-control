@@ -23,6 +23,15 @@
 
 #include "logic-motion.hpp"
 
-TEST_CASE("Temporary holder") {
-  REQUIRE(true);
+TEST_CASE("Speed request should result in non-zero torque") {
+  Motion motion;
+
+  motion.setSpeedRequest(10.0f);
+  motion.setLeftWheelSpeed(5.0f);
+  motion.setRightWheelSpeed(4.0f);
+
+  opendlv::cfsdProxy::TorqueRequestDual msgTorque = motion.step();
+
+  REQUIRE(msgTorque.torqueLeft() > 0);
+  REQUIRE(msgTorque.torqueRight() > 0);
 }
