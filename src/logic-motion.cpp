@@ -44,28 +44,43 @@ void Motion::tearDown()
 
 void Motion::step()
 {
-  float leftWheelSpeed;
-  float rightWheelSpeed;
+  // ------------ CALCULATE TORQUE ---------------
+  float speedReading;
   float speedRequest;
   {
     std::lock_guard<std::mutex> lock(m_readingsMutex);
 
-    leftWheelSpeed = m_leftWheelSpeed;
-    rightWheelSpeed = m_rightWheelSpeed;
+    speedReading = (m_leftWheelSpeed + m_rightWheelSpeed) / 2.0f;
     speedRequest = m_speedRequest;
   }
+  
+  // TODO: see if PI controller needed / better
+  const float gearRatio = 16.0f;
+  const float mass = 217.4f;
+  const float wheelRadius = 0.22f;
+  const float pGain = mass * wheelRadius / gearRatio * 100.0f;
+
+  float speedError = speedRequest - speedReading;
+  float torque = speedError * pGain; // In [cNm]
+
+  // Check the torque if the speed is below 5 km/h, important for regenerative braking
+  // TODO: Check if there already exists a guard for this in the rear node
+  if(speedReading < 5.0f / 3.6f && torque < 0.0f){
+    torque=0;
+  }
+
+  // Torque distribution
+  int torqueLeft = static_cast<int>(torque * 0.5f);
+  int torqueRight = static_cast<int>(torque * 0.5f);
 
 
-
+  // ------------ SEND TO CAN PROXY ---------------
   cluon::data::TimeStamp sampleTime = cluon::time::now();
 
-  int leftTorque = static_cast<int>(leftWheelSpeed - speedRequest);
-  int rightTorque = static_cast<int>(rightWheelSpeed - speedRequest);
-
-  // Send to 2101
   opendlv::cfsdProxy::TorqueRequestDual msgTorque;
-  msgTorque.torqueLeft(leftTorque);
-  msgTorque.torqueRight(rightTorque);
+  msgTorque.torqueLeft(torqueLeft);
+  msgTorque.torqueRight(torqueRight);
+  m_od4.send(msgTorque, sampleTime, 2101);
 }
 
 void Motion::setLeftWheelSpeed(float speed)
