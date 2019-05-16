@@ -77,6 +77,7 @@ opendlv::cfsdProxy::TorqueRequestDual Motion::step()
   int torqueRight = static_cast<int>(torque * 0.5f);
 
 
+
   // ------------ RETURN CORRECT MESSAGE TYPE ---------------
   opendlv::cfsdProxy::TorqueRequestDual msgTorque;
   msgTorque.torqueLeft(torqueLeft);
