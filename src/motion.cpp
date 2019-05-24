@@ -64,7 +64,7 @@ int32_t main(int32_t argc, char **argv) {
       auto onGroundSpeedRequest{[&motion, &od4, VERBOSE](cluon::data::Envelope &&envelope)
         {
           uint16_t senderStamp = envelope.senderStamp();
-          if (senderStamp == 1500) {
+          if (senderStamp == 2201) {
             auto gsr = cluon::extractMessage<opendlv::proxy::GroundSpeedRequest>(std::move(envelope));
             motion.setSpeedRequest(gsr.groundSpeed());
 
