@@ -76,24 +76,20 @@ int32_t main(int32_t argc, char **argv) {
         od4.dataTrigger(opendlv::proxy::GroundSpeedRequest::ID(), onGroundSpeedRequest);
 
 
-        auto atFrequency{[&motion, &od4, &VERBOSE]() -> bool
+        auto atFrequency{[&motion, &od4, VERBOSE]() -> bool
         {
             // Calculate and send torque request at specified frequency
             opendlv::cfsdProxy::TorqueRequestDual msgTorque = motion.step();
             cluon::data::TimeStamp sampleTime = cluon::time::now();
             od4.send(msgTorque, sampleTime, 2101);
+
+            if (VERBOSE) {
+              std::cout << "Torque request left: " << msgTorque.torqueLeft() << " | right: " << msgTorque.torqueRight() << std::endl; 
+            }
             
             return true;
         }};
         od4.timeTrigger(FREQ, atFrequency);
-
-        /*
-        // Just sleep as this microservice is data driven
-        using namespace std::literals::chrono_literals;
-        while(od4.isRunning()) {
-          std::this_thread::sleep_for(1s);
-        }
-        */
 
     }
     return retCode;
