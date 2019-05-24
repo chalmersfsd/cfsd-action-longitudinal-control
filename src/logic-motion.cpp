@@ -67,7 +67,6 @@ opendlv::cfsdProxy::TorqueRequestDual Motion::step()
   float torque = speedError * m_pGain; // In [cNm]
 
   // Check the torque if the speed is below 5 km/h, important for regenerative braking
-  // TODO: Check if there already exists a guard for this in the rear node
   if (speedReading < 5.0f / 3.6f && torque < 0.0f){
     torque = 0.0f;
   }
