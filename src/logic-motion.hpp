@@ -58,7 +58,9 @@ class Motion {
     float m_iError;
 
     // Message mutexes
-    std::mutex m_readingsMutex;
+    std::mutex m_leftWheelSpeedMutex;
+    std::mutex m_rightWheelSpeedMutex;
+    std::mutex m_speedRequestMutex;
 
     
 };

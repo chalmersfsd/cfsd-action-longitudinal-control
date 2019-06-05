@@ -30,7 +30,9 @@ Motion::Motion(float pGain, float iGain, float pLimit, float iLimit, int torqueL
   , m_accelerationToTorqueFactor{}
   , m_iError{0.0f}
 
-  , m_readingsMutex{}
+  , m_leftWheelSpeedMutex{}
+  , m_rightWheelSpeedMutex{}
+  , m_speedRequestMutex{}
 {
   std::cout << "Setting up longitudinal controller..." << std::endl;
 
@@ -52,7 +54,9 @@ opendlv::cfsdProxy::TorqueRequestDual Motion::step()
   // Make a safe copy of data
   float speedReading, speedRequest;
   {
-    std::lock_guard<std::mutex> lock(m_readingsMutex);
+    std::lock_guard<std::mutex> lock1(m_leftWheelSpeedMutex);
+    std::lock_guard<std::mutex> lock2(m_rightWheelSpeedMutex);
+    std::lock_guard<std::mutex> lock3(m_speedRequestMutex);
 
     speedReading = (m_leftWheelSpeed + m_rightWheelSpeed) / 2.0f;
     speedRequest = m_speedRequest;
@@ -108,18 +112,18 @@ float Motion::calculateTorque(float error)
 // ################################# SETTERS ##################################
 void Motion::setLeftWheelSpeed(float speed)
 {
-  std::lock_guard<std::mutex> lock(m_readingsMutex);
+  std::lock_guard<std::mutex> lock(m_leftWheelSpeedMutex);
   m_leftWheelSpeed = speed;
 }
 
 void Motion::setRightWheelSpeed(float speed)
 {
-  std::lock_guard<std::mutex> lock(m_readingsMutex);
+  std::lock_guard<std::mutex> lock(m_rightWheelSpeedMutex);
   m_rightWheelSpeed = speed;
 }
 
 void Motion::setSpeedRequest(float speed)
 {
-  std::lock_guard<std::mutex> lock(m_readingsMutex);
+  std::lock_guard<std::mutex> lock(m_speedRequestMutex);
   m_speedRequest = speed;
 }
