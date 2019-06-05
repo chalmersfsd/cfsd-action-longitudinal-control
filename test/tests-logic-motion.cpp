@@ -24,7 +24,7 @@
 #include "logic-motion.hpp"
 
 TEST_CASE("Speed request should result in positive torque") {
-  Motion motion;
+  Motion motion(1.0f, 1.0f, 1000.0f, 1500.0f, 300);
 
   motion.setSpeedRequest(10.0f);
   motion.setLeftWheelSpeed(5.0f);
@@ -37,7 +37,7 @@ TEST_CASE("Speed request should result in positive torque") {
 }
 
 TEST_CASE("Speed request should result in negative torque") {
-  Motion motion;
+  Motion motion(1.0f, 1.0f, 1000.0f, 1500.0f, 300);
 
   motion.setSpeedRequest(4.0f);
   motion.setLeftWheelSpeed(10.3f);
@@ -51,7 +51,7 @@ TEST_CASE("Speed request should result in negative torque") {
 
 
 TEST_CASE("No torque if speed < 5 km/h and decelerating") {
-  Motion motion;
+  Motion motion(1.0f, 1.0f, 1000.0f, 1500.0f, 300);
 
   // Standard unit m/s, conversion from km/h
   motion.setSpeedRequest(3.0f / 3.6f);

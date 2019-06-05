@@ -26,7 +26,7 @@
 
 class Motion {
   public:
-    Motion();
+    Motion(float pGain, float iGain, float pLimit, float iLimit, int torqueLimit);
     ~Motion();
 
   public:
@@ -37,16 +37,27 @@ class Motion {
     void setSpeedRequest(float groundSpeed);
 
   private:
-    void setUp();
-    void tearDown();
+    float calculateTorque(float speedRequest);
 
 
   private:
+    // Commandline arguments
+    float m_pGain;
+    float m_iGain;
+    float m_pLimit;
+    float m_iLimit;
+    int m_torqueLimit;
+
+    // Readings and requests
     float m_leftWheelSpeed;
     float m_rightWheelSpeed;
     float m_speedRequest;
-    float m_pGain;
 
+    // Useful member variables
+    float m_accelerationToTorqueFactor;
+    float m_iError;
+
+    // Message mutexes
     std::mutex m_readingsMutex;
 
     

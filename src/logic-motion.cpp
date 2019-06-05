@@ -18,43 +18,38 @@
 #include "cluon-complete.hpp"
 #include "logic-motion.hpp"
 
-Motion::Motion()
-  : m_leftWheelSpeed{0.0f}
+Motion::Motion(float pGain, float iGain, float pLimit, float iLimit, int torqueLimit)
+  : m_pGain{pGain}
+  , m_iGain{iGain}
+  , m_pLimit{pLimit}
+  , m_iLimit{iLimit}
+  , m_torqueLimit{torqueLimit}
+  , m_leftWheelSpeed{0.0f}
   , m_rightWheelSpeed{0.0f}
   , m_speedRequest{0.0f}
-  , m_pGain{}
+  , m_accelerationToTorqueFactor{}
+  , m_iError{0.0f}
 
   , m_readingsMutex{}
 {
-  setUp();
-}
+  std::cout << "Setting up longitudinal controller..." << std::endl;
 
-Motion::~Motion()
-{
-  Motion::tearDown();
-}
-
-void Motion::setUp()
-{
-  // Calculate constant P gain based on model
-  // TODO: see if PI controller needed / better
+  // Calculate acceleration to torque conversion factor
   const float gearRatio = 16.0f;
   const float mass = 217.4f;
   const float wheelRadius = 0.22f;
-  m_pGain = mass * wheelRadius / gearRatio * 100.0f;
-
-  std::cout << "Setting up longitudinal controller" << std::endl;
+  
+  // Converts acceleration to [cNm]
+  m_accelerationToTorqueFactor = mass * wheelRadius / gearRatio * 100.0f;
 }
 
-void Motion::tearDown()
+Motion::~Motion() 
 {
 }
 
 opendlv::cfsdProxy::TorqueRequestDual Motion::step()
 {
-  // ------------ CALCULATE TORQUE ---------------
-
-  // Copy data to avoid conflict
+  // Make a safe copy of data
   float speedReading, speedRequest;
   {
     std::lock_guard<std::mutex> lock(m_readingsMutex);
@@ -62,18 +57,19 @@ opendlv::cfsdProxy::TorqueRequestDual Motion::step()
     speedReading = (m_leftWheelSpeed + m_rightWheelSpeed) / 2.0f;
     speedRequest = m_speedRequest;
   }
-  
-  float speedError = speedRequest - speedReading;
-  float torque = speedError * m_pGain; // In [cNm]
 
-  // Check the torque if the speed is below 5 km/h, important for regenerative braking
+  float speedError = speedRequest - speedReading;
+  float torque = calculateTorque(speedError);
+
+  // Check the torque if the speed is below 5 km/h, 
+  // important for regenerative braking
   if (speedReading < 5.0f / 3.6f && torque < 0.0f){
     torque = 0.0f;
   }
 
-  // Torque distribution
-  int torqueLeft = static_cast<int>(torque * 0.5f);
-  int torqueRight = static_cast<int>(torque * 0.5f);
+  // Torque distribution and limit
+  int torqueLeft = std::min(static_cast<int>(torque * 0.5f), m_torqueLimit);
+  int torqueRight = std::min(static_cast<int>(torque * 0.5f), m_torqueLimit);
 
 
 
@@ -85,10 +81,31 @@ opendlv::cfsdProxy::TorqueRequestDual Motion::step()
   return msgTorque;
 }
 
+float Motion::calculateTorque(float error)
+{
+  // ------------ CALCULATE TORQUE ---------------
+
+  // Only accumulate error when small enough
+  // to avoid too much wind up
+  if (error < 3.0f) {
+    m_iError += error;
+  }
+
+  // Limit PI feedback
+  float pFeedback = error * m_pGain;
+  pFeedback = pFeedback < m_pLimit ? pFeedback : m_pLimit;
+
+  float iFeedback = m_iError * m_iGain;
+  iFeedback = iFeedback < m_iLimit ? iFeedback : m_iLimit;
+
+  float acceleration = pFeedback + iFeedback;
+
+  // Convert acceleration to torque and return
+  return acceleration * m_accelerationToTorqueFactor;
+}
 
 
-
-// Mutex protected setters
+// ################################# SETTERS ##################################
 void Motion::setLeftWheelSpeed(float speed)
 {
   std::lock_guard<std::mutex> lock(m_readingsMutex);
