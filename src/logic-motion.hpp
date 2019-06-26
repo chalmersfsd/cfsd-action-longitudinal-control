@@ -23,10 +23,19 @@
 
 #include <mutex>
 
+struct pidObject
+{
+  float iError;
+  float kp;
+  float ki;
+  float outputLimit;
+  float iLimit;
+};
+
 
 class Motion {
   public:
-    Motion(float pGain, float iGain, float pLimit, float iLimit, int torqueLimit);
+    Motion(float accKp, float accKi, float torqueLimit, float accILimit);
     ~Motion();
 
   public:
@@ -41,21 +50,13 @@ class Motion {
 
 
   private:
-    // Commandline arguments
-    float m_pGain;
-    float m_iGain;
-    float m_pLimit;
-    float m_iLimit;
-    int m_torqueLimit;
+    pidObject m_accPid;
+    pidObject m_brakePid;
 
     // Readings and requests
     float m_leftWheelSpeed;
     float m_rightWheelSpeed;
     float m_speedRequest;
-
-    // Useful member variables
-    float m_accelerationToTorqueFactor;
-    float m_iError;
 
     // Message mutexes
     std::mutex m_leftWheelSpeedMutex;

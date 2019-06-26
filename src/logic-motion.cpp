@@ -18,31 +18,19 @@
 #include "cluon-complete.hpp"
 #include "logic-motion.hpp"
 
-Motion::Motion(float pGain, float iGain, float pLimit, float iLimit, int torqueLimit)
-  : m_pGain{pGain}
-  , m_iGain{iGain}
-  , m_pLimit{pLimit}
-  , m_iLimit{iLimit}
-  , m_torqueLimit{torqueLimit}
+Motion::Motion(float accKp, float accKi, float torqueLimit, float accILimit)
+  : m_accPid{0.0f, accKp, accKi, 2.0f*torqueLimit, accILimit}
+  , m_brakePid{0.0f, accKp, accKi, torqueLimit, accILimit}
   , m_leftWheelSpeed{0.0f}
   , m_rightWheelSpeed{0.0f}
   , m_speedRequest{0.0f}
-  , m_accelerationToTorqueFactor{}
-  , m_iError{0.0f}
 
   , m_leftWheelSpeedMutex{}
   , m_rightWheelSpeedMutex{}
   , m_speedRequestMutex{}
 {
   std::cout << "Setting up longitudinal controller..." << std::endl;
-
-  // Calculate acceleration to torque conversion factor
-  const float gearRatio = 16.0f;
-  const float mass = 217.4f;
-  const float wheelRadius = 0.22f;
-  
-  // Converts acceleration to [cNm]
-  m_accelerationToTorqueFactor = mass * wheelRadius / gearRatio * 100.0f;
+  std::cout << " Done." << std::endl;
 }
 
 Motion::~Motion() 
@@ -72,12 +60,12 @@ opendlv::cfsdProxy::TorqueRequestDual Motion::step()
   }
 
   // Torque distribution and limit
-  int torqueLeft = std::min(static_cast<int>(torque * 0.5f), m_torqueLimit);
-  int torqueRight = std::min(static_cast<int>(torque * 0.5f), m_torqueLimit);
+  int torqueLeft = static_cast<int>(torque * 0.5f);
+  int torqueRight = static_cast<int>(torque * 0.5f);
 
 
 
-  // ------------ RETURN CORRECT MESSAGE TYPE ---------------
+  // ----------------------- RETURN CORRECT MESSAGE TYPE ----------------------
   opendlv::cfsdProxy::TorqueRequestDual msgTorque;
   msgTorque.torqueLeft(torqueLeft);
   msgTorque.torqueRight(torqueRight);
@@ -87,25 +75,23 @@ opendlv::cfsdProxy::TorqueRequestDual Motion::step()
 
 float Motion::calculateTorque(float error)
 {
-  // ------------ CALCULATE TORQUE ---------------
+  // ---------------------------- CALCULATE TORQUE ----------------------------
 
   // Only accumulate error when small enough
   // to avoid too much wind up
-  if (error < 3.0f) {
-    m_iError += error;
+  if (error < 5.0f) {
+    m_accPid.iError += error;
   }
 
-  // Limit PI feedback
-  float pFeedback = error * m_pGain;
-  pFeedback = pFeedback < m_pLimit ? pFeedback : m_pLimit;
+  // Limit integral feedback
+  float iFeedback = m_accPid.iError * m_accPid.kp;
+  iFeedback = iFeedback < m_accPid.iLimit ? iFeedback : m_accPid.iLimit;
 
-  float iFeedback = m_iError * m_iGain;
-  iFeedback = iFeedback < m_iLimit ? iFeedback : m_iLimit;
+  // Limit total torque output
+  float torque = error * m_accPid.kp + iFeedback;
+  torque = torque < m_accPid.outputLimit ? torque : m_accPid.outputLimit;
 
-  float acceleration = pFeedback + iFeedback;
-
-  // Convert acceleration to torque and return
-  return acceleration * m_accelerationToTorqueFactor;
+  return torque;
 }
 
 

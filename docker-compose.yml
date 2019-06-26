@@ -4,4 +4,4 @@ services:
     cfsd-cognition-acceleration:
         image: chalmersfsd/cfsd-action-longitudinal-control:test-piControl
         network_mode: "host"
-        command: "motion --cid=219 --freq=10 --pGain=2.0 --iGain=1.0 --pLimit=10, --iLimit=5 --torqueLimit=240"
+        command: "motion --cid=219 --freq=50 --accKp=300 --accKi=5 --torqueLimit=2400 --accILimit=500"

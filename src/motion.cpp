@@ -28,39 +28,38 @@ int32_t main(int32_t argc, char **argv) {
     auto commandlineArguments = cluon::getCommandlineArguments(argc, argv);
     if (0 == commandlineArguments.count("cid") || 
         0 == commandlineArguments.count("freq") ||
-        0 == commandlineArguments.count("pGain") ||
-        0 == commandlineArguments.count("iGain") ||
-        0 == commandlineArguments.count("pLimit") ||
-        0 == commandlineArguments.count("iLimit") ||
-        0 == commandlineArguments.count("torqueLimit")) {
+        0 == commandlineArguments.count("accKp") ||
+        0 == commandlineArguments.count("accKi") ||
+        0 == commandlineArguments.count("torqueLimit") ||
+        0 == commandlineArguments.count("accILimit")) {
         std::cerr << argv[0] << "Generates the acceleration requests for Lynx" << std::endl;
         std::cerr << "Usage:   " << argv[0] << " --cid=<OpenDaVINCI session ID> --freq=<microservice frequency> " <<
-                  "--pGain=<Proportional controller gain> -- iGain=<Integration controller gain> " <<
-                  "--pLimit=<Proportional feedback limit> --iLimit=<Integration feedback limit> " <<
-                  "--torqueLimit=<Torque limit (0-2400)> [--verbose=<Print or not>]" << std::endl;
+                  "--accKp=<Proportional controller gain> -- accKi=<Integration controller gain> " <<
+                  "--torqueLimit=<Torque limit (0-2400)> --accILimit=<Integration feedback limit> " <<
+                  "[--verbose=<Print or not>]" << std::endl;
 
-        std::cerr << "Example: " << argv[0] << "--cid=111 --freq=30 --pGain=1 --iGain=0.5 " <<
-             "--pLimit=10 --iLimit=5 --torqueLimit=240 [--verbose]" << std::endl;
+        std::cerr << "Example: " << argv[0] << "--cid=111 --freq=30 --accKp=1 --accKi=0.5 " <<
+             "--torqueLimit=1200 --accILimit=5  [--verbose]" << std::endl;
         retCode = 1;
     } else {
 
       // Interface to a running OpenDaVINCI session.  
       cluon::OD4Session od4{static_cast<uint16_t>(std::stoi(commandlineArguments["cid"]))};
       float FREQ{static_cast<float>(std::stof(commandlineArguments["freq"]))};
-      float pGain{static_cast<float>(std::stof(commandlineArguments["pGain"]))};
-      float iGain{static_cast<float>(std::stof(commandlineArguments["iGain"]))};
-      float pLimit{static_cast<float>(std::stof(commandlineArguments["pLimit"]))};
-      float iLimit{static_cast<float>(std::stof(commandlineArguments["iLimit"]))};
-      int torqueLimit{static_cast<int>(std::stoi(commandlineArguments["torqueLimit"]))};
+      float accKp{static_cast<float>(std::stof(commandlineArguments["accKp"]))};
+      float accKi{static_cast<float>(std::stof(commandlineArguments["accKi"]))};
+      float torqueLimit{static_cast<float>(std::stof(commandlineArguments["torqueLimit"]))};
+      float accILimit{static_cast<float>(std::stof(commandlineArguments["accILimit"]))};
       bool VERBOSE{static_cast<bool>(commandlineArguments.count("verbose"))};
 
       // 
       if (torqueLimit < 0 || torqueLimit > 2400) {
         std::cerr << "Specified torque limit not between 0 - 2400\nExiting program..." << std::endl;
-        return -1;
+        retCode = 2;
+        return retCode;
       } 
 
-      Motion motion(pGain, iGain, pLimit, iLimit, torqueLimit);
+      Motion motion(accKp, accKi, torqueLimit, accILimit);
 
       //TODO: Should we use wheelSpeedReadings or filtered groundSpeedReading?
       auto onWheelSpeedReading{[&motion, VERBOSE](cluon::data::Envelope &&envelope)
