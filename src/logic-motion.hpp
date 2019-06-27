@@ -26,16 +26,16 @@
 struct pidObject
 {
   float iError;
-  float kp;
-  float ki;
-  float outputLimit;
-  float iLimit;
+  const float kp;
+  const float ki;
+  const float outputLimit;
+  const float iLimit;
 };
 
 
 class Motion {
   public:
-    Motion(float accKp, float accKi, float torqueLimit, float accILimit);
+    Motion(float dt, float accKp, float accKi, float torqueLimit, float accILimit);
     ~Motion();
 
   public:
@@ -50,6 +50,7 @@ class Motion {
 
 
   private:
+    float m_dt;
     pidObject m_accPid;
     pidObject m_brakePid;
 

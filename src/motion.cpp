@@ -51,15 +51,16 @@ int32_t main(int32_t argc, char **argv) {
       float torqueLimit{static_cast<float>(std::stof(commandlineArguments["torqueLimit"]))};
       float accILimit{static_cast<float>(std::stof(commandlineArguments["accILimit"]))};
       bool VERBOSE{static_cast<bool>(commandlineArguments.count("verbose"))};
+      float DT{1.0f/FREQ};
 
-      // 
+      // Check if torque limit is within bounds
       if (torqueLimit < 0 || torqueLimit > 2400) {
         std::cerr << "Specified torque limit not between 0 - 2400\nExiting program..." << std::endl;
         retCode = 2;
         return retCode;
       } 
 
-      Motion motion(accKp, accKi, torqueLimit, accILimit);
+      Motion motion(DT, accKp, accKi, torqueLimit, accILimit);
 
       //TODO: Should we use wheelSpeedReadings or filtered groundSpeedReading?
       auto onWheelSpeedReading{[&motion, VERBOSE](cluon::data::Envelope &&envelope)
@@ -79,7 +80,23 @@ int32_t main(int32_t argc, char **argv) {
             }
          }
         }};
-      od4.dataTrigger(opendlv::proxy::WheelSpeedReading::ID(), onWheelSpeedReading);
+      //od4.dataTrigger(opendlv::proxy::WheelSpeedReading::ID(), onWheelSpeedReading);
+
+      auto onGroundSpeedReading{[&motion, VERBOSE](cluon::data::Envelope &&envelope) 
+      {
+        uint16_t senderStamp = envelope.senderStamp();
+        if (senderStamp == 112) {
+          auto gsr = cluon::extractMessage<opendlv::proxy::GroundSpeedReading>(std::move(envelope));
+
+          motion.setRightWheelSpeed(gsr.groundSpeed());
+          motion.setLeftWheelSpeed(gsr.groundSpeed());
+
+          if (VERBOSE) {
+            std::cout << "[LYNX-VIEWER] GroundSpeedReading: " << gsr.groundSpeed() << std::endl;
+          }
+        }
+      }};
+      od4.dataTrigger(opendlv::proxy::GroundSpeedReading::ID(), onGroundSpeedReading);
 
       auto onGroundSpeedRequest{[&motion, &od4, VERBOSE](cluon::data::Envelope &&envelope)
         {

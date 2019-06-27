@@ -18,8 +18,9 @@
 #include "cluon-complete.hpp"
 #include "logic-motion.hpp"
 
-Motion::Motion(float accKp, float accKi, float torqueLimit, float accILimit)
-  : m_accPid{0.0f, accKp, accKi, 2.0f*torqueLimit, accILimit}
+Motion::Motion(float dt, float accKp, float accKi, float torqueLimit, float accILimit)
+  : m_dt{dt}
+  , m_accPid{0.0f, accKp, accKi, 2.0f*torqueLimit, accILimit}
   , m_brakePid{0.0f, accKp, accKi, torqueLimit, accILimit}
   , m_leftWheelSpeed{0.0f}
   , m_rightWheelSpeed{0.0f}
@@ -73,23 +74,29 @@ opendlv::cfsdProxy::TorqueRequestDual Motion::step()
   return msgTorque;
 }
 
-float Motion::calculateTorque(float error)
+float Motion::calculateTorque(const float error)
 {
   // ---------------------------- CALCULATE TORQUE ----------------------------
 
   // Only accumulate error when small enough
   // to avoid too much wind up
-  if (error < 5.0f) {
-    m_accPid.iError += error;
+  if (std::abs(error) < 5.0f) {
+    m_accPid.iError += error * m_dt;
   }
 
   // Limit integral feedback
-  float iFeedback = m_accPid.iError * m_accPid.kp;
-  iFeedback = iFeedback < m_accPid.iLimit ? iFeedback : m_accPid.iLimit;
+  if (m_accPid.iError > m_accPid.iLimit) {
+    m_accPid.iError = m_accPid.iLimit;
+  } else if (m_accPid.iError < 0.0f) {
+    m_accPid.iError = 0.0f;
+  }
+  
+  float pFeedback = error * m_accPid.kp;
+  float iFeedback = m_accPid.iError * m_accPid.ki;
 
   // Limit total torque output
-  float torque = error * m_accPid.kp + iFeedback;
-  torque = torque < m_accPid.outputLimit ? torque : m_accPid.outputLimit;
+  float torque = pFeedback + iFeedback;
+  torque = torque > m_accPid.outputLimit ? m_accPid.outputLimit : torque;
 
   return torque;
 }
