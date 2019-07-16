@@ -41,8 +41,7 @@ class Motion {
   public:
     opendlv::cfsdProxy::TorqueRequestDual step();
 
-    void setLeftWheelSpeed(float speed);
-    void setRightWheelSpeed(float speed);
+    void setGroundSpeedReading(float groundSpeed);
     void setSpeedRequest(float groundSpeed);
 
   private:
@@ -55,13 +54,11 @@ class Motion {
     pidObject m_brakePid;
 
     // Readings and requests
-    float m_leftWheelSpeed;
-    float m_rightWheelSpeed;
+    float m_groundSpeed;
     float m_speedRequest;
 
     // Message mutexes
-    std::mutex m_leftWheelSpeedMutex;
-    std::mutex m_rightWheelSpeedMutex;
+    std::mutex m_speedReadingMutex;
     std::mutex m_speedRequestMutex;
 
     

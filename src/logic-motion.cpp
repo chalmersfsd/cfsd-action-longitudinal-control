@@ -22,12 +22,10 @@ Motion::Motion(float dt, float accKp, float accKi, float torqueLimit, float accI
   : m_dt{dt}
   , m_accPid{0.0f, accKp, accKi, 2.0f*torqueLimit, accILimit}
   , m_brakePid{0.0f, accKp, accKi, torqueLimit, accILimit}
-  , m_leftWheelSpeed{0.0f}
-  , m_rightWheelSpeed{0.0f}
+  , m_groundSpeed{0.0f}
   , m_speedRequest{0.0f}
 
-  , m_leftWheelSpeedMutex{}
-  , m_rightWheelSpeedMutex{}
+  , m_speedReadingMutex{}
   , m_speedRequestMutex{}
 {
   std::cout << "Setting up longitudinal controller..." << std::endl;
@@ -43,11 +41,10 @@ opendlv::cfsdProxy::TorqueRequestDual Motion::step()
   // Make a safe copy of data
   float speedReading, speedRequest;
   {
-    std::lock_guard<std::mutex> lock1(m_leftWheelSpeedMutex);
-    std::lock_guard<std::mutex> lock2(m_rightWheelSpeedMutex);
-    std::lock_guard<std::mutex> lock3(m_speedRequestMutex);
+    std::lock_guard<std::mutex> lock1(m_speedReadingMutex);
+    std::lock_guard<std::mutex> lock2(m_speedRequestMutex);
 
-    speedReading = (m_leftWheelSpeed + m_rightWheelSpeed) / 2.0f;
+    speedReading = m_groundSpeed;
     speedRequest = m_speedRequest;
   }
 
@@ -103,16 +100,10 @@ float Motion::calculateTorque(const float error)
 
 
 // ################################# SETTERS ##################################
-void Motion::setLeftWheelSpeed(float speed)
+void Motion::setGroundSpeedReading(float groundSpeed)
 {
-  std::lock_guard<std::mutex> lock(m_leftWheelSpeedMutex);
-  m_leftWheelSpeed = speed;
-}
-
-void Motion::setRightWheelSpeed(float speed)
-{
-  std::lock_guard<std::mutex> lock(m_rightWheelSpeedMutex);
-  m_rightWheelSpeed = speed;
+  std::lock_guard<std::mutex> lock(m_speedReadingMutex);
+  m_groundSpeed = groundSpeed;
 }
 
 void Motion::setSpeedRequest(float speed)

@@ -62,34 +62,13 @@ int32_t main(int32_t argc, char **argv) {
 
       Motion motion(DT, accKp, accKi, torqueLimit, accILimit);
 
-      //TODO: Should we use wheelSpeedReadings or filtered groundSpeedReading?
-      auto onWheelSpeedReading{[&motion, VERBOSE](cluon::data::Envelope &&envelope)
-        {
-          uint16_t senderStamp = envelope.senderStamp();
-          if (senderStamp == 1904) {
-            auto wheelSpeedReading = cluon::extractMessage<opendlv::proxy::WheelSpeedReading>(std::move(envelope));
-             motion.setLeftWheelSpeed(wheelSpeedReading.wheelSpeed());
-            if (VERBOSE) {
-                std::cout << "[ACTION-MOTION] FL wheel speed reading: " << wheelSpeedReading.wheelSpeed() << std::endl;
-            }
-          } else if (senderStamp == 1903) {
-            auto wheelSpeedReading = cluon::extractMessage<opendlv::proxy::WheelSpeedReading>(std::move(envelope));
-            motion.setRightWheelSpeed(wheelSpeedReading.wheelSpeed());
-            if (VERBOSE) {
-              std::cout << "[ACTION-MOTION] FR wheel speed reading: " << wheelSpeedReading.wheelSpeed() << std::endl;
-            }
-         }
-        }};
-      //od4.dataTrigger(opendlv::proxy::WheelSpeedReading::ID(), onWheelSpeedReading);
-
       auto onGroundSpeedReading{[&motion, VERBOSE](cluon::data::Envelope &&envelope) 
       {
         uint16_t senderStamp = envelope.senderStamp();
-        if (senderStamp == 112) {
+        if (senderStamp == 3000) {
           auto gsr = cluon::extractMessage<opendlv::proxy::GroundSpeedReading>(std::move(envelope));
 
-          motion.setRightWheelSpeed(gsr.groundSpeed());
-          motion.setLeftWheelSpeed(gsr.groundSpeed());
+          motion.setGroundSpeedReading(gsr.groundSpeed());
 
           if (VERBOSE) {
             std::cout << "[LYNX-VIEWER] GroundSpeedReading: " << gsr.groundSpeed() << std::endl;
