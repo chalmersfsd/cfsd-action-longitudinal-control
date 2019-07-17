@@ -29,6 +29,7 @@ Motion::Motion(float dt, float accKp, float accKi, float torqueLimit, float accI
   , m_speedRequestMutex{}
 {
   std::cout << "Setting up longitudinal controller..." << std::endl;
+  std::cout << torqueLimit << std::endl;
   std::cout << " Done." << std::endl;
 }
 
@@ -50,16 +51,14 @@ opendlv::cfsdProxy::TorqueRequestDual Motion::step()
 
   float speedError = speedRequest - speedReading;
   float torque = calculateTorque(speedError);
+  (void) torque;
 
   // Check the torque if the speed is below 5 km/h, 
   // important for regenerative braking
-  if (speedReading < 5.0f / 3.6f && torque < 0.0f){
-    torque = 0.0f;
-  }
 
   // Torque distribution and limit
-  int torqueLeft = static_cast<int>(torque * 0.5f);
-  int torqueRight = static_cast<int>(torque * 0.5f);
+  int torqueLeft = static_cast<int>(m_accPid.outputLimit);
+  int torqueRight = static_cast<int>(m_accPid.outputLimit);
 
 
 
@@ -91,9 +90,12 @@ float Motion::calculateTorque(const float error)
   float pFeedback = error * m_accPid.kp;
   float iFeedback = m_accPid.iError * m_accPid.ki;
 
+  (void) pFeedback;
+  (void) iFeedback;
+
   // Limit total torque output
-  float torque = pFeedback + iFeedback;
-  torque = torque > m_accPid.outputLimit ? m_accPid.outputLimit : torque;
+  // float torque = pFeedback + iFeedback;
+  float torque = m_accPid.outputLimit;
 
   return torque;
 }
