@@ -32,10 +32,9 @@ struct pidObject
   const float iLimit;
 };
 
-
 class Motion {
   public:
-    Motion(float dt, float accKp, float accKi, float torqueLimit, float accILimit);
+    Motion(float dt, float accKp, float torqueLimit);
     ~Motion();
 
   public:
@@ -45,7 +44,7 @@ class Motion {
     void setSpeedRequest(float groundSpeed);
 
   private:
-    float calculateTorque(float speedRequest);
+    float calculateTorque(float speedError, float speedReading);
 
 
   private:
@@ -56,6 +55,19 @@ class Motion {
     // Readings and requests
     float m_groundSpeed;
     float m_speedRequest;
+
+    // System parameters
+    struct
+    {
+      const float m = 217.4f;
+      const float gearRatio = 16.0f;
+      const float A = 1.14f;
+      const float rho = 1.18415f;
+      const float Cd = 1.21f;
+      const float g = 9.81f;
+      const float fr = 0.01f;
+      const float Rw = 0.22f;
+    } m_param;
 
     // Message mutexes
     std::mutex m_speedReadingMutex;

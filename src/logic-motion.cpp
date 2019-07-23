@@ -18,12 +18,13 @@
 #include "cluon-complete.hpp"
 #include "logic-motion.hpp"
 
-Motion::Motion(float dt, float accKp, float accKi, float torqueLimit, float accILimit)
+Motion::Motion(float dt, float accKp, float torqueLimit)
   : m_dt{dt}
-  , m_accPid{0.0f, accKp, accKi, 2.0f*torqueLimit, accILimit}
-  , m_brakePid{0.0f, accKp, accKi, torqueLimit, accILimit}
+  , m_accPid{0.0f, accKp, 0.0f, 2.0f*torqueLimit, 0.0f}
+  , m_brakePid{0.0f, accKp, 0.0f, torqueLimit, 0.0f}
   , m_groundSpeed{0.0f}
   , m_speedRequest{0.0f}
+  , m_param{}
 
   , m_speedReadingMutex{}
   , m_speedRequestMutex{}
@@ -49,7 +50,7 @@ opendlv::cfsdProxy::TorqueRequestDual Motion::step()
   }
 
   float speedError = speedRequest - speedReading;
-  float torque = calculateTorque(speedError);
+  float torque = calculateTorque(speedError, speedReading);
 
   // Check the torque if the speed is below 5 km/h, 
   // important for regenerative braking
@@ -71,28 +72,20 @@ opendlv::cfsdProxy::TorqueRequestDual Motion::step()
   return msgTorque;
 }
 
-float Motion::calculateTorque(const float error)
+float Motion::calculateTorque(const float speedError, const float speedReading)
 {
   // ---------------------------- CALCULATE TORQUE ----------------------------
+  // Feedforward based on system resistances
+  float airResistance = 0.5f * m_param.Cd * m_param.A * m_param.rho * std::pow(speedReading, 2.0f);
+  float rollResistance = m_param.m * m_param.g * m_param.fr;
+  float force = airResistance + rollResistance;
+  float ffTorque = force * m_param.Rw / m_param.gearRatio * 100.0f; // convert to cNm
 
-  // Only accumulate error when small enough
-  // to avoid too much wind up
-  if (std::abs(error) < 5.0f) {
-    m_accPid.iError += error * m_dt;
-  }
+  // Proportionall gain based on error
+  float pTorque = speedError * m_accPid.kp;
 
-  // Limit integral feedback
-  if (m_accPid.iError > m_accPid.iLimit) {
-    m_accPid.iError = m_accPid.iLimit;
-  } else if (m_accPid.iError < 0.0f) {
-    m_accPid.iError = 0.0f;
-  }
-  
-  float pFeedback = error * m_accPid.kp;
-  float iFeedback = m_accPid.iError * m_accPid.ki;
-
-  // Limit total torque output
-  float torque = pFeedback + iFeedback;
+  // Torque
+  float torque = pTorque + ffTorque;
   torque = torque > m_accPid.outputLimit ? m_accPid.outputLimit : torque;
 
   return torque;

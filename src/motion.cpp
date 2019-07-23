@@ -29,17 +29,14 @@ int32_t main(int32_t argc, char **argv) {
     if (0 == commandlineArguments.count("cid") || 
         0 == commandlineArguments.count("freq") ||
         0 == commandlineArguments.count("accKp") ||
-        0 == commandlineArguments.count("accKi") ||
-        0 == commandlineArguments.count("torqueLimit") ||
-        0 == commandlineArguments.count("accILimit")) {
+        0 == commandlineArguments.count("torqueLimit")) {
         std::cerr << argv[0] << "Generates the acceleration requests for Lynx" << std::endl;
         std::cerr << "Usage:   " << argv[0] << " --cid=<OpenDaVINCI session ID> --freq=<microservice frequency> " <<
-                  "--accKp=<Proportional controller gain> -- accKi=<Integration controller gain> " <<
-                  "--torqueLimit=<Torque limit (0-2400)> --accILimit=<Integration feedback limit> " <<
+                  "--accKp=<Proportional controller gain> " <<
+                  "--torqueLimit=<Torque limit (0-2400)>" <<
                   "[--verbose=<Print or not>]" << std::endl;
-
-        std::cerr << "Example: " << argv[0] << "--cid=111 --freq=30 --accKp=1 --accKi=0.5 " <<
-             "--torqueLimit=1200 --accILimit=5  [--verbose]" << std::endl;
+        std::cerr << "Example: " << argv[0] << "--cid=111 --freq=30 --accKp=1 " <<
+             "--torqueLimit=1200 [--verbose]" << std::endl;
         retCode = 1;
     } else {
 
@@ -47,9 +44,7 @@ int32_t main(int32_t argc, char **argv) {
       cluon::OD4Session od4{static_cast<uint16_t>(std::stoi(commandlineArguments["cid"]))};
       float FREQ{static_cast<float>(std::stof(commandlineArguments["freq"]))};
       float accKp{static_cast<float>(std::stof(commandlineArguments["accKp"]))};
-      float accKi{static_cast<float>(std::stof(commandlineArguments["accKi"]))};
       float torqueLimit{static_cast<float>(std::stof(commandlineArguments["torqueLimit"]))};
-      float accILimit{static_cast<float>(std::stof(commandlineArguments["accILimit"]))};
       bool VERBOSE{static_cast<bool>(commandlineArguments.count("verbose"))};
       float DT{1.0f/FREQ};
 
@@ -60,7 +55,7 @@ int32_t main(int32_t argc, char **argv) {
         return retCode;
       } 
 
-      Motion motion(DT, accKp, accKi, torqueLimit, accILimit);
+      Motion motion(DT, accKp, torqueLimit);
 
       auto onGroundSpeedReading{[&motion, VERBOSE](cluon::data::Envelope &&envelope) 
       {

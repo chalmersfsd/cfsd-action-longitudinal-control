@@ -2,6 +2,6 @@ version: '2'
 
 services:
     cfsd-cognition-acceleration:
-        image: chalmersfsd/cfsd-action-longitudinal-control:test-piControl
+        image: chalmersfsd/cfsd-action-longitudinal-control:test-feedforward
         network_mode: "host"
-        command: "motion --cid=219 --freq=50 --accKp=100 --accKi=2 --torqueLimit=2400 --accILimit=100"
+        command: "motion --cid=130 --freq=50 --accKp=100 --torqueLimit=1200 --verbose"

@@ -26,10 +26,9 @@
 TEST_CASE("Speed request should result in positive torque") {
   float dt = 0.01f;
   float accKp = 300.0f;
-  float accKi = 5.0f;
   float torqueLimit = 2400.0f;
-  float accILimit = 500.0f;
-  Motion motion(dt, accKp, accKi, torqueLimit, accILimit);
+
+  Motion motion(dt, accKp, torqueLimit);
 
   motion.setSpeedRequest(10.0f);
   motion.setGroundSpeedReading(5.0f);
@@ -43,10 +42,9 @@ TEST_CASE("Speed request should result in positive torque") {
 TEST_CASE("Speed request should result in negative torque") {
   float dt = 0.01f;
   float accKp = 300.0f;
-  float accKi = 5.0f;
   float torqueLimit = 2400.0f;
-  float accILimit = 500.0f;
-  Motion motion(dt, accKp, accKi, torqueLimit, accILimit);
+
+  Motion motion(dt, accKp, torqueLimit);
 
   motion.setSpeedRequest(4.0f);
   motion.setGroundSpeedReading(10.2f);
@@ -61,15 +59,14 @@ TEST_CASE("Speed request should result in negative torque") {
 TEST_CASE("No torque if speed < 5 km/h and decelerating") {
   float dt = 0.01f;
   float accKp = 300.0f;
-  float accKi = 5.0f;
   float torqueLimit = 2400.0f;
-  float accILimit = 500.0f;
-  Motion motion(dt, accKp, accKi, torqueLimit, accILimit);
+
+  Motion motion(dt, accKp, torqueLimit);
 
   // Standard unit m/s, conversion from km/h
   motion.setSpeedRequest(3.0f / 3.6f);
   motion.setGroundSpeedReading(4.5f/3.6f);
-
+  
   opendlv::cfsdProxy::TorqueRequestDual msgTorque = motion.step();
 
   REQUIRE(msgTorque.torqueLeft() == 0);
