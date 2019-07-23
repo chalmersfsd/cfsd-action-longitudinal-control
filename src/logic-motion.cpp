@@ -76,10 +76,10 @@ float Motion::calculateTorque(const float speedError, const float speedReading)
 {
   // ---------------------------- CALCULATE TORQUE ----------------------------
   // Feedforward based on system resistances
-  float airResistance = 0.5f * m_param.Cd * m_param.A * m_param.rho * std::pow(speedReading, 2.0f);
-  float rollResistance = m_param.m * m_param.g * m_param.fr;
-  float force = airResistance + rollResistance;
-  float ffTorque = force * m_param.Rw / m_param.gearRatio * 100.0f; // convert to cNm
+  float force = m_param.m * m_param.g * m_param.fr; // Roll resistance
+  force = speedError > 0.0f ? force : 0.0f;
+  force += 0.5f * m_param.Cd * m_param.A * m_param.rho * std::pow(speedReading, 2.0f); // air resistance
+  float ffTorque = force * m_param.Rw / m_param.gearRatio * 100.0f; // convert to motor torque in cNm
 
   // Proportionall gain based on error
   float pTorque = speedError * m_accPid.kp;

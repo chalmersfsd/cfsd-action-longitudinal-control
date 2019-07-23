@@ -65,7 +65,7 @@ class Motion {
       const float rho = 1.18415f;
       const float Cd = 1.21f;
       const float g = 9.81f;
-      const float fr = 0.01f;
+      const float fr = 0.03f;
       const float Rw = 0.22f;
     } m_param;
 
