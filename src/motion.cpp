@@ -94,16 +94,25 @@ int32_t main(int32_t argc, char **argv) {
 
       auto atFrequency{[&motion, &od4, VERBOSE]() -> bool
         {
-            // Calculate and send torque request at specified frequency
-            opendlv::cfsdProxy::TorqueRequestDual msgTorque = motion.step();
-            cluon::data::TimeStamp sampleTime = cluon::time::now();
-            od4.send(msgTorque, sampleTime, 2101);
+          // Calculate and send torque request at specified frequency
+          opendlv::cfsdProxy::TorqueRequestDual msgTorque = motion.step();
+          cluon::data::TimeStamp sampleTime = cluon::time::now();
+          od4.send(msgTorque, sampleTime, 2101);
 
-            if (VERBOSE) {
-              std::cout << "Torque request left: " << msgTorque.torqueLeft() << " | right: " << msgTorque.torqueRight() << std::endl; 
-            }
+          // Send out in standard message set too because of problem with
+          // exporting messages from extended message set
+          opendlv::proxy::TorqueRequest stdMsgTorque;
+          stdMsgTorque.torque(msgTorque.torqueLeft());
+          od4.send(stdMsgTorque, sampleTime, 2102);
+
+          stdMsgTorque.torque(msgTorque.torqueRight());
+          od4.send(stdMsgTorque, sampleTime, 2103);
+
+          if (VERBOSE) {
+            std::cout << "Torque request left: " << msgTorque.torqueLeft() << " | right: " << msgTorque.torqueRight() << std::endl; 
+          }
             
-            return true;
+          return true;
         }};
       od4.timeTrigger(FREQ, atFrequency);
 
