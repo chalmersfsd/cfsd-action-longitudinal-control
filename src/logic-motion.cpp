@@ -18,12 +18,14 @@
 #include "cluon-complete.hpp"
 #include "logic-motion.hpp"
 
-Motion::Motion(float dt, float accKp, float accKi, float torqueLimit, float accILimit)
+Motion::Motion(float dt, float accKp, float accKi, float torqueLimit, float accILimit, float torqueRateLimit)
   : m_dt{dt}
-  , m_accPid{0.0f, accKp, accKi, 2.0f*torqueLimit, accILimit}
+  , m_torqueRateLimit{torqueRateLimit}
+  , m_accPid{0.0f, accKp, accKi, torqueLimit, accILimit}
   , m_brakePid{0.0f, accKp, accKi, torqueLimit, accILimit}
   , m_groundSpeed{0.0f}
   , m_speedRequest{0.0f}
+  , m_prevTorque{0.0f}
 
   , m_speedReadingMutex{}
   , m_speedRequestMutex{}
@@ -51,6 +53,14 @@ opendlv::cfsdProxy::TorqueRequestDual Motion::step()
   float speedError = speedRequest - speedReading;
   float torque = calculateTorque(speedError);
 
+  if (torque - m_prevTorque > m_torqueRateLimit * m_dt) {
+    torque = m_prevTorque + m_torqueRateLimit * m_dt;
+  } else if (torque - m_prevTorque < -m_torqueRateLimit * m_dt) {
+    torque = m_prevTorque - m_torqueRateLimit * m_dt;
+  }
+
+  m_prevTorque = torque;
+
   // Check the torque if the speed is below 5 km/h, 
   // important for regenerative braking
   if (speedReading < 5.0f / 3.6f && torque < 0.0f){
@@ -58,8 +68,8 @@ opendlv::cfsdProxy::TorqueRequestDual Motion::step()
   }
 
   // Torque distribution and limit
-  int torqueLeft = static_cast<int>(torque * 0.5f);
-  int torqueRight = static_cast<int>(torque * 0.5f);
+  int torqueLeft = static_cast<int>(torque);
+  int torqueRight = static_cast<int>(torque);
 
 
 
