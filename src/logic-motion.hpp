@@ -34,7 +34,7 @@ struct pidObject
 
 class Motion {
   public:
-    Motion(float dt, float accKp, float torqueLimit);
+    Motion(float dt, float accKp, float torqueLimit, float torqueRateLimit);
     ~Motion();
 
   public:
@@ -48,13 +48,15 @@ class Motion {
 
 
   private:
-    float m_dt;
+    const float m_dt;
+    const float m_torqueRateLimit;
     pidObject m_accPid;
     pidObject m_brakePid;
 
     // Readings and requests
     float m_groundSpeed;
     float m_speedRequest;
+    float m_prevTorque;
 
     // System parameters
     struct

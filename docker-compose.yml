@@ -4,4 +4,4 @@ services:
     cfsd-cognition-acceleration:
         image: chalmersfsd/cfsd-action-longitudinal-control:test-feedforward
         network_mode: "host"
-        command: "motion --cid=130 --freq=50 --accKp=100 --torqueLimit=1200 --verbose"
+        command: "motion --cid=130 --freq=50 --accKp=60 --torqueLimit=1200 --torqueRateLimit=100 --verbose"

@@ -18,12 +18,14 @@
 #include "cluon-complete.hpp"
 #include "logic-motion.hpp"
 
-Motion::Motion(float dt, float accKp, float torqueLimit)
+Motion::Motion(float dt, float accKp, float torqueLimit, float torqueRateLimit)
   : m_dt{dt}
-  , m_accPid{0.0f, accKp, 0.0f, 2.0f*torqueLimit, 0.0f}
+  , m_torqueRateLimit{torqueRateLimit}
+  , m_accPid{0.0f, accKp, 0.0f, torqueLimit, 0.0f}
   , m_brakePid{0.0f, accKp, 0.0f, torqueLimit, 0.0f}
   , m_groundSpeed{0.0f}
   , m_speedRequest{0.0f}
+  , m_prevTorque{0.0f}
   , m_param{}
 
   , m_speedReadingMutex{}
@@ -52,6 +54,12 @@ opendlv::cfsdProxy::TorqueRequestDual Motion::step()
   float speedError = speedRequest - speedReading;
   float torque = calculateTorque(speedError, speedReading);
 
+  if (torque - m_prevTorque > m_torqueRateLimit * m_dt) {
+    torque = m_prevTorque + m_torqueRateLimit * m_dt;
+  } else if (torque - m_prevTorque < -m_torqueRateLimit * m_dt) {
+    torque = m_prevTorque - m_torqueRateLimit * m_dt;
+  }
+
   // Check the torque if the speed is below 5 km/h, 
   // important for regenerative braking
   if (speedReading < 5.0f / 3.6f && torque < 0.0f){
@@ -59,10 +67,10 @@ opendlv::cfsdProxy::TorqueRequestDual Motion::step()
   }
 
   // Torque distribution and limit
-  int torqueLeft = static_cast<int>(torque * 0.5f);
-  int torqueRight = static_cast<int>(torque * 0.5f);
+  int torqueLeft = static_cast<int>(torque);
+  int torqueRight = static_cast<int>(torque);
 
-
+  m_prevTorque = torque;
 
   // ----------------------- RETURN CORRECT MESSAGE TYPE ----------------------
   opendlv::cfsdProxy::TorqueRequestDual msgTorque;
@@ -77,7 +85,7 @@ float Motion::calculateTorque(const float speedError, const float speedReading)
   // ---------------------------- CALCULATE TORQUE ----------------------------
   // Feedforward based on system resistances
   float force = m_param.m * m_param.g * m_param.fr; // Roll resistance
-  force = speedError > 0.0f ? force : 0.0f;
+  force = (speedReading >= 0.0f && speedError >= 0.0f) ? force : 0.0f;
   force += 0.5f * m_param.Cd * m_param.A * m_param.rho * std::pow(speedReading, 2.0f); // air resistance
   float ffTorque = force * m_param.Rw / m_param.gearRatio * 100.0f; // convert to motor torque in cNm
 
@@ -86,7 +94,7 @@ float Motion::calculateTorque(const float speedError, const float speedReading)
 
   // Torque
   float torque = pTorque + ffTorque;
-  torque = torque > m_accPid.outputLimit ? m_accPid.outputLimit : torque;
+  torque = torque > m_accPid.outputLimit ? m_accPid.outputLimit : torque;  
 
   return torque;
 }

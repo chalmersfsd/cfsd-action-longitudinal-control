@@ -29,14 +29,15 @@ int32_t main(int32_t argc, char **argv) {
     if (0 == commandlineArguments.count("cid") || 
         0 == commandlineArguments.count("freq") ||
         0 == commandlineArguments.count("accKp") ||
-        0 == commandlineArguments.count("torqueLimit")) {
+        0 == commandlineArguments.count("torqueLimit") ||
+        0 == commandlineArguments.count("torqueRateLimit")) {
         std::cerr << argv[0] << "Generates the acceleration requests for Lynx" << std::endl;
         std::cerr << "Usage:   " << argv[0] << " --cid=<OpenDaVINCI session ID> --freq=<microservice frequency> " <<
                   "--accKp=<Proportional controller gain> " <<
-                  "--torqueLimit=<Torque limit (0-2400)>" <<
+                  "--torqueLimit=<Torque limit (0-2400)> --torqueRateLimit=<cNm/s>" <<
                   "[--verbose=<Print or not>]" << std::endl;
         std::cerr << "Example: " << argv[0] << "--cid=111 --freq=30 --accKp=1 " <<
-             "--torqueLimit=1200 [--verbose]" << std::endl;
+             "--torqueLimit=1200 --torqueRateLimit=50[--verbose]" << std::endl;
         retCode = 1;
     } else {
 
@@ -45,6 +46,7 @@ int32_t main(int32_t argc, char **argv) {
       float FREQ{static_cast<float>(std::stof(commandlineArguments["freq"]))};
       float accKp{static_cast<float>(std::stof(commandlineArguments["accKp"]))};
       float torqueLimit{static_cast<float>(std::stof(commandlineArguments["torqueLimit"]))};
+      float torqueRateLimit{static_cast<float>(std::stof(commandlineArguments["torqueRateLimit"]))};
       bool VERBOSE{static_cast<bool>(commandlineArguments.count("verbose"))};
       float DT{1.0f/FREQ};
 
@@ -55,7 +57,7 @@ int32_t main(int32_t argc, char **argv) {
         return retCode;
       } 
 
-      Motion motion(DT, accKp, torqueLimit);
+      Motion motion(DT, accKp, torqueLimit, torqueRateLimit);
 
       auto onGroundSpeedReading{[&motion, VERBOSE](cluon::data::Envelope &&envelope) 
       {
