@@ -84,3 +84,25 @@ TEST_CASE("No torque if speed < 5 km/h and decelerating") {
   REQUIRE(msgTorque.torqueLeft() == 0);
   REQUIRE(msgTorque.torqueRight() == 0);
 }
+
+TEST_CASE("Torque doesn't increase immediately") {
+  float dt = 0.01f;
+  float accKp = 300.0f;
+  float accKi = 5.0f;
+  float torqueLimit = 2400.0f;
+  float accILimit = 500.0f;
+  float torqueRateLimit = 100.0f;
+  Motion motion(dt, accKp, torqueLimit, torqueRateLimit);
+
+  // Standard unit m/s, conversion from km/h
+  motion.setSpeedRequest(5.0f);
+  motion.setGroundSpeedReading(0.0f);
+
+  opendlv::cfsdProxy::TorqueRequestDual msgTorque;
+  for (int i = 0; i < 2; i++) {
+    msgTorque = motion.step();
+  }
+
+  REQUIRE(msgTorque.torqueLeft() < 100);
+  REQUIRE(msgTorque.torqueRight() < 100);
+}
