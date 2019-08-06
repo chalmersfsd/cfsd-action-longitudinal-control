@@ -62,16 +62,16 @@ void Motion::step()
   } else {
     float speedError = speedRequest - speedReading;
     torque = calculateTorque(speedError);
+  
+    if (torque - m_prevTorque > m_torqueRateLimit * m_dt) {
+      torque = m_prevTorque + m_torqueRateLimit * m_dt;
+    } else if (torque - m_prevTorque < -m_torqueRateLimit * m_dt) {
+      torque = m_prevTorque - m_torqueRateLimit * m_dt;
+    }
+    m_prevTorque = torque;
     m_brakeDuty = 0U;
   }
 
-  if (torque - m_prevTorque > m_torqueRateLimit * m_dt) {
-    torque = m_prevTorque + m_torqueRateLimit * m_dt;
-  } else if (torque - m_prevTorque < -m_torqueRateLimit * m_dt) {
-    torque = m_prevTorque - m_torqueRateLimit * m_dt;
-  }
-
-  m_prevTorque = torque;
 
   // Check the torque if the speed is below 5 km/h, 
   // important for regenerative braking
@@ -132,11 +132,11 @@ void Motion::setGroundSpeedReading(float groundSpeed)
 {
   std::lock_guard<std::mutex> lock(m_speedReadingMutex);
   m_groundSpeed = groundSpeed;
-  m_stop = groundSpeed <= 0.0f ? true : false;
 }
 
 void Motion::setSpeedRequest(float speed)
 {
   std::lock_guard<std::mutex> lock(m_speedRequestMutex);
   m_speedRequest = speed;
+  m_stop = speed <= 0.0f ? true : false;
 }
