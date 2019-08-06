@@ -39,9 +39,13 @@ TEST_CASE("Speed request should result in positive torque") {
     motion.step();
   }
   opendlv::cfsdProxy::TorqueRequestDual msgTorque = motion.getTorque();
+  opendlv::proxy::PulseWidthModulationRequest msgBrake = motion.getBrake();
 
   REQUIRE(msgTorque.torqueLeft() > 0);
   REQUIRE(msgTorque.torqueRight() > 0);
+  
+  // No braking when torque is non-zero
+  REQUIRE(msgBrake.dutyCycleNs() == 0U);
 }
 
 TEST_CASE("Speed request should result in negative torque") {
@@ -60,9 +64,13 @@ TEST_CASE("Speed request should result in negative torque") {
     motion.step();
   }
   opendlv::cfsdProxy::TorqueRequestDual msgTorque = motion.getTorque();
+  opendlv::proxy::PulseWidthModulationRequest msgBrake = motion.getBrake();
 
   REQUIRE(msgTorque.torqueLeft() < 0);
   REQUIRE(msgTorque.torqueRight() < 0);
+
+  // No braking when torque is non-zero
+  REQUIRE(msgBrake.dutyCycleNs() == 0U);
 }
 
 
@@ -109,4 +117,50 @@ TEST_CASE("Torque doesn't increase immediately") {
 
   REQUIRE(msgTorque.torqueLeft() < 100);
   REQUIRE(msgTorque.torqueRight() < 100);
+}
+
+TEST_CASE("Torque always less than specified limit")
+{
+  float dt = 0.05f;
+  float accKp = 300.0f;
+  float accKi = 40.0f;
+  float torqueLimit = 400.0f;
+  float accILimit = 500.0f;
+  float torqueRateLimit = 100.0f;
+  Motion motion(dt, accKp, accKi, torqueLimit, accILimit, torqueRateLimit);
+
+  motion.setSpeedRequest(20.0f);
+  motion.setGroundSpeedReading(0.0f);
+
+  for (int i = 0; i < 200; i++) {
+    motion.step();
+  }
+  opendlv::cfsdProxy::TorqueRequestDual msgTorque = motion.getTorque();
+
+  REQUIRE(msgTorque.torqueLeft() <= torqueLimit);
+  REQUIRE(msgTorque.torqueRight() <= torqueLimit);
+}
+
+TEST_CASE("Brake when speedRequest is <= 0.0f, also torque should be zero")
+{
+  float dt = 0.01f;
+  float accKp = 300.0f;
+  float accKi = 40.0f;
+  float torqueLimit = 400.0f;
+  float accILimit = 500.0f;
+  float torqueRateLimit = 100.0f;
+  Motion motion(dt, accKp, accKi, torqueLimit, accILimit, torqueRateLimit);
+
+  motion.setSpeedRequest(0.0f);
+  motion.setGroundSpeedReading(10.0f);
+
+  for (int i = 0; i < 100; i++) {
+    motion.step();
+  }
+  opendlv::cfsdProxy::TorqueRequestDual msgTorque = motion.getTorque();
+  opendlv::proxy::PulseWidthModulationRequest msgBrake = motion.getBrake();
+  
+  REQUIRE(msgTorque.torqueLeft() == Approx(0.0f).epsilon(0.01f));
+  REQUIRE(msgTorque.torqueRight() == Approx(0.0f).epsilon(0.01f));
+  REQUIRE(msgBrake.dutyCycleNs() > 0U);
 }
