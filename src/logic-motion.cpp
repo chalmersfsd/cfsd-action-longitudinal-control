@@ -138,5 +138,5 @@ void Motion::setSpeedRequest(float speed)
 {
   std::lock_guard<std::mutex> lock(m_speedRequestMutex);
   m_speedRequest = speed;
-  m_stop = speed <= 0.0f ? true : false;
+  m_stop = speed < 0.0f ? true : false;
 }
