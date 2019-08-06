@@ -20,12 +20,16 @@
 
 Motion::Motion(float dt, float accKp, float accKi, float torqueLimit, float accILimit, float torqueRateLimit)
   : m_dt{dt}
+  , m_prevTorque{0.0f}
   , m_torqueRateLimit{torqueRateLimit}
+  , m_torqueLeft{0U}
+  , m_torqueRight{0U}
+  , m_stop{false}
+  , m_brakeDuty{0U}
   , m_accPid{0.0f, accKp, accKi, torqueLimit, accILimit}
   , m_brakePid{0.0f, accKp, accKi, torqueLimit, accILimit}
   , m_groundSpeed{0.0f}
   , m_speedRequest{0.0f}
-  , m_prevTorque{0.0f}
 
   , m_speedReadingMutex{}
   , m_speedRequestMutex{}
@@ -38,7 +42,7 @@ Motion::~Motion()
 {
 }
 
-opendlv::cfsdProxy::TorqueRequestDual Motion::step()
+void Motion::step()
 {
   // Make a safe copy of data
   float speedReading, speedRequest;
@@ -50,8 +54,16 @@ opendlv::cfsdProxy::TorqueRequestDual Motion::step()
     speedRequest = m_speedRequest;
   }
 
-  float speedError = speedRequest - speedReading;
-  float torque = calculateTorque(speedError);
+
+  float torque;
+  if (m_stop) {
+    torque = 0.0f;
+    m_brakeDuty = 50000U;
+  } else {
+    float speedError = speedRequest - speedReading;
+    torque = calculateTorque(speedError);
+    m_brakeDuty = 0U;
+  }
 
   if (torque - m_prevTorque > m_torqueRateLimit * m_dt) {
     torque = m_prevTorque + m_torqueRateLimit * m_dt;
@@ -67,18 +79,9 @@ opendlv::cfsdProxy::TorqueRequestDual Motion::step()
     torque = 0.0f;
   }
 
-  // Torque distribution and limit
-  int torqueLeft = static_cast<int>(torque);
-  int torqueRight = static_cast<int>(torque);
-
-
-
-  // ----------------------- RETURN CORRECT MESSAGE TYPE ----------------------
-  opendlv::cfsdProxy::TorqueRequestDual msgTorque;
-  msgTorque.torqueLeft(torqueLeft);
-  msgTorque.torqueRight(torqueRight);
-
-  return msgTorque;
+  // Torque distribution
+  m_torqueLeft = static_cast<int>(torque);
+  m_torqueRight = static_cast<int>(torque);
 }
 
 float Motion::calculateTorque(const float error)
@@ -108,12 +111,28 @@ float Motion::calculateTorque(const float error)
   return torque;
 }
 
+// ################################# GETTERS ##################################
+opendlv::cfsdProxy::TorqueRequestDual Motion::getTorque()
+{
+  opendlv::cfsdProxy::TorqueRequestDual torque;
+  torque.torqueLeft(m_torqueLeft);
+  torque.torqueRight(m_torqueRight);
+  return torque;
+}
+
+opendlv::proxy::PulseWidthModulationRequest Motion::getBrake()
+{
+  opendlv::proxy::PulseWidthModulationRequest brakeReq;
+  brakeReq.dutyCycleNs(m_brakeDuty);
+  return brakeReq;
+}
 
 // ################################# SETTERS ##################################
 void Motion::setGroundSpeedReading(float groundSpeed)
 {
   std::lock_guard<std::mutex> lock(m_speedReadingMutex);
   m_groundSpeed = groundSpeed;
+  m_stop = groundSpeed <= 0.0f ? true : false;
 }
 
 void Motion::setSpeedRequest(float speed)

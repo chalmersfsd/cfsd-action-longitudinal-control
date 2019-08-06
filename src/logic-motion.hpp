@@ -39,7 +39,9 @@ class Motion {
     ~Motion();
 
   public:
-    opendlv::cfsdProxy::TorqueRequestDual step();
+    void step();
+    opendlv::cfsdProxy::TorqueRequestDual getTorque();
+    opendlv::proxy::PulseWidthModulationRequest getBrake();
 
     void setGroundSpeedReading(float groundSpeed);
     void setSpeedRequest(float groundSpeed);
@@ -50,20 +52,23 @@ class Motion {
 
   private:
     float m_dt;
+    float m_prevTorque;
     const float m_torqueRateLimit;
+    int m_torqueLeft;
+    int m_torqueRight;
+    bool m_stop;
+    uint32_t m_brakeDuty;
     pidObject m_accPid;
     pidObject m_brakePid;
 
     // Readings and requests
     float m_groundSpeed;
     float m_speedRequest;
-    float m_prevTorque;
 
     // Message mutexes
     std::mutex m_speedReadingMutex;
     std::mutex m_speedRequestMutex;
 
-    
 };
 #endif
 

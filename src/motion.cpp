@@ -93,13 +93,21 @@ int32_t main(int32_t argc, char **argv) {
         }};
       od4.dataTrigger(opendlv::proxy::GroundSpeedRequest::ID(), onGroundSpeedRequest);
 
-
-      auto atFrequency{[&motion, &od4, VERBOSE]() -> bool
+      uint32_t brakeDutyOld = 0U;
+      auto atFrequency{[&motion, &od4, &brakeDutyOld, VERBOSE]() -> bool
         {
-          // Calculate and send torque request at specified frequency
-          opendlv::cfsdProxy::TorqueRequestDual msgTorque = motion.step();
+          // Update brake and torque
+          motion.step();
+
+          opendlv::cfsdProxy::TorqueRequestDual msgTorque = motion.getTorque();
           cluon::data::TimeStamp sampleTime = cluon::time::now();
           od4.send(msgTorque, sampleTime, 2101);
+
+          // Only send brake request when value change due to STM proxy limitations
+          opendlv::proxy::PulseWidthModulationRequest msgBrake = motion.getBrake();
+          if (msgBrake.dutyCycleNs() != brakeDutyOld) {
+            od4.send(msgBrake, sampleTime, 2150);
+          }
 
           // Send out in standard message set too because of problem with
           // exporting messages from extended message set

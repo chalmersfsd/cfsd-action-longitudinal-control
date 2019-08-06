@@ -35,10 +35,10 @@ TEST_CASE("Speed request should result in positive torque") {
   motion.setSpeedRequest(10.0f);
   motion.setGroundSpeedReading(5.0f);
 
-  opendlv::cfsdProxy::TorqueRequestDual msgTorque;
   for (int i = 0; i < 100; i++) {
-    msgTorque = motion.step();
+    motion.step();
   }
+  opendlv::cfsdProxy::TorqueRequestDual msgTorque = motion.getTorque();
 
   REQUIRE(msgTorque.torqueLeft() > 0);
   REQUIRE(msgTorque.torqueRight() > 0);
@@ -56,10 +56,10 @@ TEST_CASE("Speed request should result in negative torque") {
   motion.setSpeedRequest(4.0f);
   motion.setGroundSpeedReading(10.2f);
 
-  opendlv::cfsdProxy::TorqueRequestDual msgTorque;
   for (int i = 0; i < 100; i++) {
-    msgTorque = motion.step();
+    motion.step();
   }
+  opendlv::cfsdProxy::TorqueRequestDual msgTorque = motion.getTorque();
 
   REQUIRE(msgTorque.torqueLeft() < 0);
   REQUIRE(msgTorque.torqueRight() < 0);
@@ -79,10 +79,10 @@ TEST_CASE("No torque if speed < 5 km/h and decelerating") {
   motion.setSpeedRequest(3.0f / 3.6f);
   motion.setGroundSpeedReading(4.5f/3.6f);
 
-  opendlv::cfsdProxy::TorqueRequestDual msgTorque;
   for (int i = 0; i < 100; i++) {
-    msgTorque = motion.step();
+    motion.step();
   }
+  opendlv::cfsdProxy::TorqueRequestDual msgTorque = motion.getTorque();
 
   REQUIRE(msgTorque.torqueLeft() == 0);
   REQUIRE(msgTorque.torqueRight() == 0);
@@ -101,10 +101,11 @@ TEST_CASE("Torque doesn't increase immediately") {
   motion.setSpeedRequest(5.0f);
   motion.setGroundSpeedReading(0.0f);
 
-  opendlv::cfsdProxy::TorqueRequestDual msgTorque;
   for (int i = 0; i < 2; i++) {
-    msgTorque = motion.step();
+    motion.step();
   }
+
+  opendlv::cfsdProxy::TorqueRequestDual msgTorque = motion.getTorque();
 
   REQUIRE(msgTorque.torqueLeft() < 100);
   REQUIRE(msgTorque.torqueRight() < 100);
