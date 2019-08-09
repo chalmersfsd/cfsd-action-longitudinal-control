@@ -71,6 +71,7 @@ int32_t main(int32_t argc, char **argv) {
           auto gsr = cluon::extractMessage<opendlv::proxy::GroundSpeedReading>(std::move(envelope));
 
           motion.setGroundSpeedReading(gsr.groundSpeed());
+          motion.setGroundSpeedReading(0.0f);
 
           if (VERBOSE) {
             std::cout << "[LYNX-VIEWER] GroundSpeedReading: " << gsr.groundSpeed() << std::endl;
