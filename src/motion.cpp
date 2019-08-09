@@ -79,6 +79,18 @@ int32_t main(int32_t argc, char **argv) {
       }};
       od4.dataTrigger(opendlv::proxy::GroundSpeedReading::ID(), onGroundSpeedReading);
 
+      // Read the as state
+      int state = 0;
+      auto SwitchStateReading = [VERBOSE,&state](cluon::data::Envelope &&env)
+        {
+          opendlv::proxy::SwitchStateReading p = cluon::extractMessage<opendlv::proxy::SwitchStateReading>(std::move(env));
+          // reading the as state from the state machine
+          if (env.senderStamp() == 2101){ // asState
+              state = p.state();
+          }
+        };
+      od4.dataTrigger(opendlv::proxy::SwitchStateReading::ID(), SwitchStateReading);
+
       auto onGroundSpeedRequest{[&motion, &od4, VERBOSE](cluon::data::Envelope &&envelope)
         {
           uint16_t senderStamp = envelope.senderStamp();
@@ -94,8 +106,16 @@ int32_t main(int32_t argc, char **argv) {
       od4.dataTrigger(opendlv::proxy::GroundSpeedRequest::ID(), onGroundSpeedRequest);
 
       uint32_t brakeDutyOld = 0U;
-      auto atFrequency{[&motion, &od4, &brakeDutyOld, VERBOSE]() -> bool
+      uint32_t counter = 0U;
+      auto atFrequency{[&motion, &od4, &brakeDutyOld, &state, &counter, FREQ, VERBOSE]() -> bool
         {
+          // Wait until  2s after AS_DRIVING state
+          if (state != asState::AS_DRIVING) {
+            return true;
+          } else if (counter < 2 * FREQ) {
+            counter++;
+            return true;
+          }
           // Update brake and torque
           motion.step();
 

@@ -141,7 +141,7 @@ TEST_CASE("Torque always less than specified limit")
   REQUIRE(msgTorque.torqueRight() <= torqueLimit);
 }
 
-TEST_CASE("Brake when speedRequest is <= 0.0f, also torque should be zero")
+TEST_CASE("Brake when speedRequest is < 0.0f, also torque should be zero")
 {
   float dt = 0.01f;
   float accKp = 300.0f;
@@ -151,7 +151,7 @@ TEST_CASE("Brake when speedRequest is <= 0.0f, also torque should be zero")
   float torqueRateLimit = 100.0f;
   Motion motion(dt, accKp, accKi, torqueLimit, accILimit, torqueRateLimit);
 
-  motion.setSpeedRequest(0.0f);
+  motion.setSpeedRequest(-1.0f);
   motion.setGroundSpeedReading(10.0f);
 
   for (int i = 0; i < 100; i++) {
